@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1920">
+<title>F1 Wallpaper</title>
+<style>
+  @font-face {
+    font-family: 'Titillium Web';
+    font-weight: 400;
+    font-style: normal;
+    src: url(FONT_400_PLACEHOLDER) format('truetype');
+  }
+  @font-face {
+    font-family: 'Titillium Web';
+    font-weight: 600;
+    font-style: normal;
+    src: url(FONT_600_PLACEHOLDER) format('truetype');
+  }
+  @font-face {
+    font-family: 'Titillium Web';
+    font-weight: 700;
+    font-style: normal;
+    src: url(FONT_700_PLACEHOLDER) format('truetype');
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0f1117;
+    --card:     #1a1d2e;
+    --card-alt: #1f2235;
+    --accent:   #e10600;
+    --text:     #ffffff;
+    --dim:      #8b8fa8;
+    --border:   #2a2d3e;
+    --font:     'Titillium Web', 'Segoe UI', sans-serif;
+  }
+
+  html, body {
+    width: 100vw; height: 100vh;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .shell::before {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 900px 600px at 15% 60%, rgba(225,6,0,0.04) 0%, transparent 70%),
+      radial-gradient(ellipse 700px 500px at 85% 30%, rgba(225,6,0,0.025) 0%, transparent 70%),
+      repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(255,255,255,0.01) 40px);
+    pointer-events: none; z-index: -1;
+  }
+
+  /* Checkered flag fading in from left edge */
+  .shell::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 700px; height: 100%;
+    background:
+      repeating-conic-gradient(rgba(255,255,255,0.12) 0% 25%, transparent 0% 50%)
+      0 0 / 32px 32px;
+    -webkit-mask-image: linear-gradient(to right, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 40%, transparent 75%);
+    mask-image: linear-gradient(to right, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.5) 40%, transparent 75%);
+    pointer-events: none; z-index: -1;
+  }
+
+  .shell {
+    position: relative; z-index: 1;
+    display: flex; flex-direction: column;
+    width: 1920px; height: 1080px;
+    overflow: hidden;
+  }
+
+  /* TOP BAR */
+  .top-bar {
+    flex-shrink: 0; height: 60px;
+    padding: 0 48px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 6px double var(--accent);
+    background: rgba(15,17,23,0.96);
+    box-shadow: 0 3px 20px rgba(225,6,0,0.2);
+  }
+  .top-bar-left { display: flex; align-items: center; gap: 18px; }
+  .f1-logo { display: flex; align-items: center; }
+  .f1-logo img { height: 38px; width: auto; object-fit: contain; }
+  .top-title {
+    font-size: 16px; font-weight: 600;
+    letter-spacing: 0.22em; text-transform: uppercase; color: var(--text);
+  }
+  .top-title span { color: var(--dim); font-weight: 400; }
+
+  /* MAIN 3-COLUMN */
+  .main {
+    flex: 1; display: grid;
+    grid-template-columns: 260px 1fr 820px;
+    min-height: 0;
+  }
+
+  /* LEFT: Circuit */
+  .col-circuit {
+    padding: 28px 20px 20px 36px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .circuit-svg-wrap {
+    width: 180px; height: 220px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .circuit-svg-wrap svg {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+    stroke: var(--accent) !important;
+    stroke-width: 2px;
+    fill: none !important;
+    filter: drop-shadow(0 0 8px rgba(225,6,0,0.45)) drop-shadow(0 0 28px rgba(225,6,0,0.18));
+  }
+  .circuit-svg-wrap svg * {
+    stroke: var(--accent) !important;
+    fill: none !important;
+  }
+  .circuit-no-svg {
+    width: 180px; height: 220px;
+    border: 2px dashed var(--border); border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--dim); font-size: 16px; letter-spacing: 0.1em;
+  }
+  .circuit-label {
+    margin-top: 14px; font-size: 14px; font-weight: 600;
+    letter-spacing: 0.22em; text-transform: uppercase;
+    color: var(--dim); text-align: center;
+  }
+
+  /* CENTER: Race info + Sessions */
+  .col-center {
+    padding: 32px 42px;
+    display: flex; flex-direction: column; justify-content: center;
+    border-right: 1px solid var(--border);
+  }
+  .race-eyebrow {
+    font-size: 13px; font-weight: 700;
+    letter-spacing: 0.28em; text-transform: uppercase;
+    color: var(--dim); margin-bottom: 8px;
+  }
+  .race-name {
+    font-size: 53px; font-weight: 700;
+    line-height: 1; letter-spacing: -0.01em;
+    color: var(--text); margin-bottom: 28px;
+    display: flex; align-items: center; gap: 36px;
+  }
+  .country-flag {
+    height: 36px; width: auto;
+    border-radius: 3px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    flex-shrink: 0;
+    margin-top: 8px;
+  }
+  .sessions-label {
+    font-size: 12px; font-weight: 700;
+    letter-spacing: 0.3em; text-transform: uppercase;
+    color: var(--dim); margin-bottom: 10px;
+    padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  }
+  .sessions-list { display: flex; flex-direction: column; gap: 3px; }
+  .session-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 16px; border-radius: 3px;
+    border-left: 3px solid transparent;
+  }
+  .session-row.past { opacity: 0.35; }
+  .session-row.race-day {
+    border-left: 3px solid var(--accent);
+    background: rgba(225,6,0,0.15);
+  }
+  .session-label {
+    font-size: 17px; font-weight: 600; letter-spacing: 0.05em; color: var(--text);
+  }
+  .session-time {
+    font-size: 16px; font-weight: 400;
+    letter-spacing: 0.08em; color: var(--dim);
+    font-variant-numeric: tabular-nums;
+  }
+  .session-row.race-day .session-label { color: var(--text); font-weight: 700; letter-spacing: 0.08em; }
+  .session-row.race-day .session-time { color: rgba(255,255,255,0.85); font-weight: 600; }
+
+  /* RIGHT: Championships */
+  .col-standings {
+    padding: 24px 28px 20px 28px;
+    display: flex; flex-direction: column;
+    justify-content: center;
+  }
+  .standings-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .standings-panel { display: flex; flex-direction: column; min-height: 0; }
+  .standings-panel-title {
+    font-size: 13px; font-weight: 700;
+    letter-spacing: 0.28em; text-transform: uppercase;
+    color: var(--text);
+    margin-bottom: 8px; padding-bottom: 8px;
+    border-bottom: 2px solid var(--accent);
+    flex-shrink: 0;
+  }
+  .st-header {
+    display: flex; align-items: center;
+    padding: 5px 8px;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--dim); border-bottom: 1px solid var(--border);
+    margin-bottom: 2px; flex-shrink: 0;
+  }
+  .sh-pos  { width: 26px; flex-shrink: 0; }
+  .sh-name { flex: 1; }
+  .sh-pts  { width: 40px; text-align: right; flex-shrink: 0; }
+
+  .st-row {
+    display: flex; align-items: center;
+    padding: 6px 8px; border-radius: 2px;
+    border-left: 2px solid transparent;
+  }
+  .st-row.leader {
+    border-left: 2px solid var(--accent);
+    background: rgba(225,6,0,0.07);
+  }
+  .st-pos {
+    width: 28px; flex-shrink: 0;
+    font-size: 16px; font-weight: 700;
+    color: var(--dim); font-variant-numeric: tabular-nums;
+  }
+  .st-row.leader .st-pos { color: var(--text); }
+  .st-name {
+    flex: 1; font-size: 18px; font-weight: 400;
+    color: var(--text); white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .st-name-con { font-size: 18px; }
+  .st-code {
+    font-size: 14px; font-weight: 700;
+    letter-spacing: 0.1em; color: var(--dim);
+    min-width: 34px; flex-shrink: 0;
+  }
+  .st-row.leader .st-code { color: var(--dim); }
+  .st-full { font-size: 18px; flex-shrink: 0; }
+  .st-team {
+    font-size: 13px; font-weight: 400;
+    color: var(--dim); white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+    flex-shrink: 1; min-width: 0;
+  }
+  .st-pts {
+    width: 48px; text-align: right; flex-shrink: 0;
+    font-size: 18px; font-weight: 700;
+    color: var(--text); font-variant-numeric: tabular-nums;
+  }
+  .st-row.leader .st-pts { color: var(--text); }
+
+  /* Team color dot badge */
+  .team-badge {
+    width: 8px; height: 8px; border-radius: 50%;
+    flex-shrink: 0; align-self: center;
+    display: inline-block;
+  }
+
+  /* BOTTOM BAR */
+  .bottom-bar {
+    flex-shrink: 0; height: 38px;
+    border-top: 6px double var(--accent);
+    display: flex; align-items: center; justify-content: flex-end;
+    padding: 0 48px; background: rgba(15,17,23,0.97);
+    box-shadow: 0 -3px 20px rgba(225,6,0,0.2);
+  }
+  .bottom-credit {
+    font-size: 12px; font-weight: 400;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--dim); opacity: 0.55;
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <div class="f1-logo">
+        <img src="F1_LOGO_URI_PLACEHOLDER" alt="F1">
+      </div>
+      <div class="top-title">{{YEAR}} <span>&middot;</span> Round {{ROUND_NUMBER}} <span>&middot;</span> {{COUNTRY}}</div>
+    </div>
+  </div>
+
+  <div class="main">
+
+    <div class="col-circuit">
+      <div class="circuit-svg-wrap">{{CIRCUIT_SVG}}</div>
+      <div class="circuit-label">{{CIRCUIT_NAME}}</div>
+    </div>
+
+    <div class="col-center">
+      <div class="race-eyebrow">Next Race</div>
+      <div class="race-name"><span>{{RACE_NAME}}</span><img class="country-flag" src="https://flagcdn.com/h240/{{COUNTRY_ISO_LOWER}}.png" alt=""></div>
+      <div class="sessions-label">Weekend Schedule</div>
+      <div class="sessions-list">{{SESSIONS_HTML}}</div>
+    </div>
+
+    <div class="col-standings">
+      <div class="standings-grid">
+
+        <div class="standings-panel">
+          <div class="standings-panel-title">Drivers&#39; Championship</div>
+          <div class="st-header">
+            <span class="sh-pos">#</span>
+            <span class="sh-name">Driver</span>
+            <span class="sh-pts">PTS</span>
+          </div>
+          {{DRIVER_STANDINGS_HTML}}
+        </div>
+
+        <div class="standings-panel">
+          <div class="standings-panel-title">Constructors&#39; Championship</div>
+          <div class="st-header">
+            <span class="sh-pos">#</span>
+            <span class="sh-name">Constructor</span>
+            <span class="sh-pts">PTS</span>
+          </div>
+          {{CONSTRUCTOR_STANDINGS_HTML}}
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <div class="bottom-bar"></div>
+
+</div>
+</body>
+</html>
