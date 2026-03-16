@@ -46,12 +46,12 @@ def main() -> None:
     print("=" * 58)
 
     # ── Step 1: Python dependencies ───────────────────────────────────────────
-    print("\n[1/4] Installing Python dependencies…")
+    print("\n[1/5] Installing Python dependencies…")
     run_step([PYTHON, "-m", "pip", "install", "--quiet", "-r", str(REQUIREMENTS)], show_cmd=True)
     print("      Done.")
 
     # ── Step 2: Playwright Chromium ───────────────────────────────────────────
-    print("\n[2/4] Downloading Playwright Chromium browser…")
+    print("\n[2/5] Downloading Playwright Chromium browser…")
     run_step([PYTHON, "-m", "playwright", "install", "chromium"], show_cmd=True)
     print("      Done.")
 

@@ -34,39 +34,65 @@ TASK_NAME    = "F1WallpaperAutoUpdate"
 
 def _setup_windows() -> None:
     launcher_path = PROJECT_ROOT / "scripts" / "run_wallpaper.bat"
+    log_path = PROJECT_ROOT / "data" / "wallpaper" / "wallpaper.log"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
     launcher_path.write_text(
-        f'@echo off\ncd /d "{PROJECT_ROOT}"\n"{PYTHON}" "{SCRIPT}"\n',
+        f'@echo off\ncd /d "{PROJECT_ROOT}"\n"{PYTHON}" "{SCRIPT}" >> "{log_path}" 2>&1\n',
         encoding="utf-8",
     )
 
-    # PowerShell script registers two triggers: at logon and daily at 9 AM
+    # Try PowerShell first (supports logon + daily triggers in one task).
+    # Falls back to schtasks for daily-only if PowerShell is blocked by policy.
     ps_script = f"""
-$action   = New-ScheduledTaskAction -Execute '"{launcher_path}"'
-$atLogon  = New-ScheduledTaskTrigger -AtLogOn
-$daily    = New-ScheduledTaskTrigger -Daily -At "09:00"
-$settings = New-ScheduledTaskSettingsSet `
-    -ExecutionTimeLimit (New-TimeSpan -Minutes 5) `
-    -StartWhenAvailable `
-    -MultipleInstances IgnoreNew
-Register-ScheduledTask `
-    -TaskName   "{TASK_NAME}" `
-    -Action     $action `
-    -Trigger    $atLogon, $daily `
-    -Settings   $settings `
-    -RunLevel   Highest `
-    -Force | Out-Null
-Write-Host "OK"
+$ErrorActionPreference = "Stop"
+try {{
+    $action   = New-ScheduledTaskAction -Execute '"{launcher_path}"'
+    $atLogon  = New-ScheduledTaskTrigger -AtLogOn
+    $daily    = New-ScheduledTaskTrigger -Daily -At "09:00"
+    $settings = New-ScheduledTaskSettingsSet `
+        -ExecutionTimeLimit (New-TimeSpan -Minutes 5) `
+        -StartWhenAvailable `
+        -MultipleInstances IgnoreNew
+    $principal = New-ScheduledTaskPrincipal `
+        -UserId ([System.Security.Principal.WindowsIdentity]::GetCurrent().Name) `
+        -LogonType Interactive -RunLevel Limited
+    Register-ScheduledTask `
+        -TaskName   "{TASK_NAME}" `
+        -Action     $action `
+        -Trigger    $atLogon, $daily `
+        -Settings   $settings `
+        -Principal  $principal `
+        -Force | Out-Null
+    Write-Host "OK"
+}} catch {{
+    Write-Host "FAILED: $_"
+}}
 """
     result = subprocess.run(
         ["powershell", "-NonInteractive", "-NoProfile", "-Command", ps_script],
         capture_output=True,
         text=True,
     )
-    if result.returncode != 0 or "OK" not in result.stdout:
-        print(f"  [warn] PowerShell error:\n{result.stderr.strip()}")
+    if result.returncode == 0 and "OK" in result.stdout:
+        print(f"  Task Scheduler: '{TASK_NAME}' registered (logon + daily 9 AM).")
+        print(f"  To remove: schtasks /Delete /TN {TASK_NAME} /F")
         return
-    print(f"  Task Scheduler: '{TASK_NAME}' registered.")
-    print(f"  To remove: schtasks /Delete /TN {TASK_NAME} /F")
+
+    # PowerShell failed — fall back to schtasks for daily-only trigger
+    print(f"  [warn] PowerShell registration failed, trying schtasks fallback…")
+    if result.stderr.strip():
+        print(f"         {result.stderr.strip()}")
+    fallback = subprocess.run(
+        ["schtasks", "/Create", "/TN", TASK_NAME,
+         "/TR", str(launcher_path), "/SC", "DAILY", "/ST", "09:00", "/F"],
+        capture_output=True, text=True,
+    )
+    if fallback.returncode == 0:
+        print(f"  Task Scheduler: '{TASK_NAME}' registered (daily 9 AM only — logon trigger requires admin).")
+        print(f"  To remove: schtasks /Delete /TN {TASK_NAME} /F")
+    else:
+        print(f"  [error] schtasks also failed:\n{fallback.stderr.strip()}")
+        print(f"  Run setup_auto_update.py as Administrator to register the task.")
 
 
 # ── macOS ─────────────────────────────────────────────────────────────────────

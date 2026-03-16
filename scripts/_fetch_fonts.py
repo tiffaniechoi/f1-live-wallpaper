@@ -25,7 +25,9 @@ def main() -> None:
             print(f"  Already exists: {filename}")
             continue
         print(f"  Downloading {filename}...")
-        dest.write_bytes(requests.get(url, timeout=15).content)
+        response = requests.get(url, timeout=15)
+        response.raise_for_status()
+        dest.write_bytes(response.content)
         print(f"  Saved: {dest}")
 
 

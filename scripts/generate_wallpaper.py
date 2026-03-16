@@ -251,6 +251,7 @@ def _set_wallpaper_windows(png_path: Path) -> None:
     except Exception as exc:
         print(f"      [warn] wallpaper style: {exc}")
 
+    # SPI_SETDESKWALLPAPER = 20, SPIF_UPDATEINIFILE | SPIF_SENDCHANGE = 3
     result = ctypes.windll.user32.SystemParametersInfoW(20, 0, abs_path, 3)
     if not result:
         raise OSError(f"SystemParametersInfoW failed: {abs_path}")
@@ -287,9 +288,8 @@ def _set_wallpaper_linux(png_path: Path) -> None:
     abs_path    = str(png_path.resolve())
     desktop_env = os.environ.get("XDG_CURRENT_DESKTOP", "").lower()
     session_env = os.environ.get("DESKTOP_SESSION",     "").lower()
-    env         = desktop_env + session_env
 
-    if "gnome" in env or "unity" in env or "budgie" in env:
+    if any(de in desktop_env or de in session_env for de in ("gnome", "unity", "budgie")):
         uri = f"file://{abs_path}"
         subprocess.run(["gsettings", "set", "org.gnome.desktop.background",
                         "picture-uri", uri])
@@ -297,9 +297,9 @@ def _set_wallpaper_linux(png_path: Path) -> None:
                         "picture-uri-dark", uri])
         subprocess.run(["gsettings", "set", "org.gnome.desktop.background",
                         "picture-options", "zoom"])
-    elif "kde" in env or "plasma" in env:
+    elif "kde" in desktop_env or "kde" in session_env or "plasma" in desktop_env or "plasma" in session_env:
         subprocess.run(["plasma-apply-wallpaperimage", abs_path])
-    elif "xfce" in env:
+    elif "xfce" in desktop_env or "xfce" in session_env:
         subprocess.run(["xfconf-query", "--channel", "xfce4-desktop",
                         "--property", "/backdrop/screen0/monitor0/workspace0/last-image",
                         "--set", abs_path])
@@ -336,13 +336,16 @@ def set_wallpaper(png_path: Path) -> None:
 def main() -> None:
     print("[1/4] Fetching F1 data from Jolpica API…")
     data = fetch_wallpaper_data()
+    if data is None:
+        print("      Skipping wallpaper generation (no upcoming race data).")
+        return
     print(f"      Race: {data.race_name} (Round {data.round_number})")
     print(f"      Drivers: {len(data.driver_standings)}  |  Constructors: {len(data.constructor_standings)}")
 
     print("[2/4] Injecting data into HTML template…")
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     template_text = TEMPLATE_PATH.read_text(encoding="utf-8")
     filled_html   = _inject_template(template_text, data)
-    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     RENDER_HTML.write_text(filled_html, encoding="utf-8")
 
     # On macOS, match the screen's aspect ratio so the image fills the display
@@ -352,6 +355,11 @@ def main() -> None:
         screen = _get_macos_screen_size()
         if screen:
             viewport_h = round(1920 * screen[1] / screen[0])
+
+    # Delete the old PNG before rendering so macOS always sees a fresh file at
+    # the same path — otherwise System Events skips the update (path unchanged).
+    if OUTPUT_PNG.exists():
+        OUTPUT_PNG.unlink()
 
     out_w, out_h = viewport_w * 2, viewport_h * 2
     print(f"[3/4] Rendering PNG via Playwright ({out_w}×{out_h})…")

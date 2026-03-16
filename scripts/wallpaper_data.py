@@ -154,13 +154,17 @@ def _to_local(utc_dt: datetime, local_tz) -> datetime:
     return utc_dt.astimezone(local_tz)
 
 
-def fetch_wallpaper_data() -> WallpaperData:
+def fetch_wallpaper_data() -> WallpaperData | None:
     local_tz = get_localzone()
     now_local = datetime.now(local_tz)
 
     # ── Next race ──────────────────────────────────────────────────────────────
     next_race_data = _get_json(f"{BASE}/current/next.json")
-    race = next_race_data["MRData"]["RaceTable"]["Races"][0]
+    races = next_race_data["MRData"]["RaceTable"]["Races"]
+    if not races:
+        print("  [warn] No upcoming race found in API response — skipping update.")
+        return None
+    race = races[0]
 
     race_name: str    = race["raceName"]
     circuit_name: str = race["Circuit"]["circuitName"]
@@ -262,5 +266,8 @@ def fetch_wallpaper_data() -> WallpaperData:
 
 if __name__ == "__main__":
     data = fetch_wallpaper_data()
-    print(f"Race: {data.race_name}")
-    print(f"Drivers: {len(data.driver_standings)}, Constructors: {len(data.constructor_standings)}")
+    if data is None:
+        print("No upcoming race data.")
+    else:
+        print(f"Race: {data.race_name}")
+        print(f"Drivers: {len(data.driver_standings)}, Constructors: {len(data.constructor_standings)}")
