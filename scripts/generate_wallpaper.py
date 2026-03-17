@@ -274,14 +274,27 @@ def _get_macos_screen_size() -> tuple[int, int] | None:
 
 def _set_wallpaper_macos(png_path: Path) -> None:
     abs_path = str(png_path.resolve())
-    # Simple one-liner — avoids picture scale syntax errors on macOS 13+.
-    # The image is pre-rendered at the screen's aspect ratio so macOS default
-    # fill behavior displays it perfectly with no cropping.
+    # Primary: System Events (works on macOS 12 and older, sometimes newer)
     script = (
         'tell application "System Events" to '
         f'set picture of every desktop to POSIX file "{abs_path}"'
     )
-    subprocess.run(["osascript", "-e", script], check=True)
+    result = subprocess.run(["osascript", "-e", script], capture_output=True, text=True)
+    if result.returncode != 0:
+        # Fallback: Finder approach (more reliable on macOS 13+ Ventura/Sonoma)
+        script2 = (
+            f'tell application "Finder" to '
+            f'set desktop picture to POSIX file "{abs_path}"'
+        )
+        result2 = subprocess.run(["osascript", "-e", script2], capture_output=True, text=True)
+        if result2.returncode != 0:
+            raise OSError(
+                f"Both osascript methods failed.\n"
+                f"System Events error: {result.stderr.strip()}\n"
+                f"Finder error: {result2.stderr.strip()}"
+            )
+    # Force the desktop to visually refresh — macOS caches wallpaper aggressively
+    subprocess.run(["killall", "Dock"], capture_output=True)
 
 
 def _set_wallpaper_linux(png_path: Path) -> None:
