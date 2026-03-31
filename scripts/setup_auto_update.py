@@ -25,9 +25,14 @@ from pathlib import Path
 
 PLATFORM     = platform.system()
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-PYTHON       = sys.executable
 SCRIPT       = PROJECT_ROOT / "scripts" / "generate_wallpaper.py"
 TASK_NAME    = "F1WallpaperAutoUpdate"
+
+# Use the project venv Python if it exists, otherwise fall back to current interpreter
+_venv_bin    = "Scripts" if PLATFORM == "Windows" else "bin"
+_venv_exe    = "python.exe" if PLATFORM == "Windows" else "python"
+_venv_python = PROJECT_ROOT / ".venv" / _venv_bin / _venv_exe
+PYTHON       = str(_venv_python) if _venv_python.exists() else sys.executable
 
 
 # ── Windows ───────────────────────────────────────────────────────────────────
@@ -178,9 +183,52 @@ def _setup_linux() -> None:
     print(f"             rm {desktop_file}")
 
 
+# ── Dependencies ──────────────────────────────────────────────────────────────
+
+def _install_dependencies() -> None:
+    venv_dir    = PROJECT_ROOT / ".venv"
+    venv_python = venv_dir / _venv_bin / _venv_exe
+
+    if not venv_dir.exists():
+        print("  Creating virtual environment…")
+        result = subprocess.run(
+            [sys.executable, "-m", "venv", str(venv_dir)],
+            capture_output=True, text=True,
+        )
+        if result.returncode != 0:
+            print(f"  [error] venv creation failed:\n{result.stderr.strip()}")
+            return
+        print(f"  Virtual environment created at {venv_dir}")
+
+    requirements = PROJECT_ROOT / "install" / "requirements_wallpaper.txt"
+    if not requirements.exists():
+        print(f"  [warn] requirements file not found: {requirements}")
+        return
+    print("  Installing Python dependencies…")
+    pip_result = subprocess.run(
+        [str(venv_python), "-m", "pip", "install", "-r", str(requirements)],
+        capture_output=True, text=True,
+    )
+    if pip_result.returncode != 0:
+        print(f"  [error] pip install failed:\n{pip_result.stderr.strip()}")
+    else:
+        print("  Dependencies installed.")
+
+    print("  Installing Playwright Chromium browser…")
+    pw_result = subprocess.run(
+        [str(venv_python), "-m", "playwright", "install", "chromium"],
+        capture_output=True, text=True,
+    )
+    if pw_result.returncode != 0:
+        print(f"  [error] playwright install failed:\n{pw_result.stderr.strip()}")
+    else:
+        print("  Playwright Chromium installed.")
+
+
 # ── Dispatcher ────────────────────────────────────────────────────────────────
 
 def main() -> None:
+    _install_dependencies()
     print(f"  Platform: {PLATFORM}")
     if PLATFORM == "Windows":
         _setup_windows()
