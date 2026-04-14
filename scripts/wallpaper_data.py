@@ -13,7 +13,7 @@ from tzlocal import get_localzone
 
 BASE = "https://api.jolpi.ca/ergast/f1"
 # julesr0y/f1-circuits-svg: white-stroke SVGs, reliable source
-SVG_BASE = "https://raw.githubusercontent.com/julesr0y/f1-circuits-svg/main/circuits/white"
+SVG_BASE = "https://raw.githubusercontent.com/julesr0y/f1-circuits-svg/main/circuits/detailed/white"
 
 # Map country name (from API) → ISO 3166-1 alpha-2 code (for flag images)
 COUNTRY_ISO_MAP: dict[str, str] = {
@@ -55,7 +55,7 @@ COUNTRY_ISO_MAP: dict[str, str] = {
 CIRCUIT_SVG_MAP: dict[str, str] = {
     "albert_park":   "melbourne-2",
     "americas":      "austin-1",
-    "bahrain":       "bahrain-3",
+    "bahrain":       "bahrain-1",
     "baku":          "baku-1",
     "catalunya":     "catalunya-6",
     "hungaroring":   "hungaroring-3",
@@ -82,7 +82,7 @@ CIRCUIT_SVG_MAP: dict[str, str] = {
     "villeneuve":    "montreal-6",
     "yas_marina":    "yas-marina-2",
     "yeongam":       "yeongam-1",
-    "zandvoort":     "zandvoort-4",
+    "zandvoort":     "zandvoort-5",
 }
 
 # Ordered session fields to check on the race object (Race itself is at the top level)
