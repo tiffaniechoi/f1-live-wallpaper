@@ -6,10 +6,10 @@ Returns a WallpaperData dataclass ready for template injection.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 import requests
-from tzlocal import get_localzone
 
 BASE = "https://api.jolpi.ca/ergast/f1"
 # julesr0y/f1-circuits-svg: white-stroke SVGs, reliable source
@@ -154,8 +154,38 @@ def _to_local(utc_dt: datetime, local_tz) -> datetime:
     return utc_dt.astimezone(local_tz)
 
 
+def _get_local_tz() -> ZoneInfo | None:
+    """Get the local timezone as a ZoneInfo object for proper abbreviations."""
+    try:
+        import time
+        if hasattr(time, "tzname") and time.tzname[0]:
+            # On Windows, time.tzname gives e.g. ('Pacific Standard Time', 'Pacific Daylight Time')
+            # Map common Windows timezone names to IANA identifiers
+            _WIN_TO_IANA = {
+                "Pacific Standard Time": "America/Los_Angeles",
+                "Mountain Standard Time": "America/Denver",
+                "Central Standard Time": "America/Chicago",
+                "Eastern Standard Time": "America/New_York",
+                "Alaska Standard Time": "America/Anchorage",
+                "Hawaiian Standard Time": "Pacific/Honolulu",
+                "GMT Standard Time": "Europe/London",
+                "Central European Standard Time": "Europe/Berlin",
+                "India Standard Time": "Asia/Kolkata",
+                "China Standard Time": "Asia/Shanghai",
+                "Tokyo Standard Time": "Asia/Tokyo",
+                "AUS Eastern Standard Time": "Australia/Sydney",
+            }
+            win_name = time.tzname[0]
+            iana_key = _WIN_TO_IANA.get(win_name)
+            if iana_key:
+                return ZoneInfo(iana_key)
+    except Exception:
+        pass
+    return None
+
+
 def fetch_wallpaper_data() -> WallpaperData | None:
-    local_tz = get_localzone()
+    local_tz = _get_local_tz() or datetime.now(timezone.utc).astimezone().tzinfo
     now_local = datetime.now(local_tz)
 
     # ── Next race ──────────────────────────────────────────────────────────────
