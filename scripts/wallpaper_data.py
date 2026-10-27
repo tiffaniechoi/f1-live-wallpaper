@@ -5,6 +5,8 @@ Returns a WallpaperData dataclass ready for template injection.
 """
 from __future__ import annotations
 
+import math
+import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -12,8 +14,11 @@ from zoneinfo import ZoneInfo
 import requests
 
 BASE = "https://api.jolpi.ca/ergast/f1"
-# julesr0y/f1-circuits-svg: white-stroke SVGs, reliable source
-SVG_BASE = "https://raw.githubusercontent.com/julesr0y/f1-circuits-svg/main/circuits/detailed/white"
+# Pin the map data revision so the API remains reproducible if its default branch changes.
+TRACK_ATLAS_BASE = (
+    "https://raw.githubusercontent.com/tobi/track-atlas/"
+    "8c12ac414ea74ffe4a3ef74b294a2eafab7ee60d/tracks"
+)
 
 # Map country name (from API) → ISO 3166-1 alpha-2 code (for flag images)
 COUNTRY_ISO_MAP: dict[str, str] = {
@@ -51,39 +56,78 @@ COUNTRY_ISO_MAP: dict[str, str] = {
     "South Africa":           "ZA",
 }
 
-# Map Jolpica circuitId → filename stem in julesr0y repo (latest layout version)
-CIRCUIT_SVG_MAP: dict[str, str] = {
-    "albert_park":   "melbourne-2",
-    "americas":      "austin-1",
-    "bahrain":       "bahrain-1",
-    "baku":          "baku-1",
-    "catalunya":     "catalunya-6",
-    "hungaroring":   "hungaroring-3",
-    "imola":         "imola-3",
-    "interlagos":    "interlagos-2",
-    "istanbul":      "istanbul-1",
-    "jeddah":        "jeddah-1",
-    "losail":        "lusail-1",
-    "marina_bay":    "marina-bay-4",
-    "miami":         "miami-1",
-    "monaco":        "monaco-6",
-    "monza":         "monza-7",
-    "mugello":       "mugello-1",
-    "nurburgring":   "nurburgring-4",
-    "portimao":      "portimao-1",
-    "red_bull_ring": "spielberg-3",
-    "rodriguez":     "mexico-city-3",
-    "shanghai":      "shanghai-1",
-    "silverstone":   "silverstone-8",
-    "sochi":         "sochi-1",
-    "spa":           "spa-francorchamps-4",
-    "suzuka":        "suzuka-2",
-    "vegas":         "las-vegas-1",
-    "villeneuve":    "montreal-6",
-    "yas_marina":    "yas-marina-2",
-    "yeongam":       "yeongam-1",
-    "zandvoort":     "zandvoort-5",
+# Map Jolpica circuit IDs to Track Atlas track slugs.
+CIRCUIT_TRACK_MAP: dict[str, str] = {
+    "albert_park":   "melbourne",
+    "americas":      "circuit-of-the-americas",
+    "bahrain":       "bahrain",
+    "baku":          "baku",
+    "catalunya":     "barcelona",
+    "hungaroring":   "hungaroring",
+    "imola":         "imola",
+    "interlagos":    "interlagos",
+    "jeddah":        "jeddah",
+    "losail":        "losail",
+    "marina_bay":    "singapore",
+    "miami":         "miami",
+    "monaco":        "monaco",
+    "monza":         "monza",
+    "mugello":       "mugello",
+    "portimao":      "portimao",
+    "red_bull_ring": "red-bull-ring",
+    "rodriguez":     "mexico-city",
+    "shanghai":      "shanghai",
+    "silverstone":   "silverstone",
+    "spa":           "spa-francorchamps",
+    "suzuka":        "suzuka",
+    "vegas":         "las-vegas",
+    "villeneuve":    "montreal",
+    "yas_marina":    "yas-marina",
+    "zandvoort":     "zandvoort",
 }
+
+
+def _circuit_svg_from_geojson(geojson: dict) -> str:
+    """Render a GeoJSON circuit outline as a compact, CSS-styled SVG."""
+    feature = next(
+        (
+            item for item in geojson.get("features", [])
+            if item.get("properties", {}).get("role") == "outline"
+            and item.get("geometry", {}).get("type") == "LineString"
+        ),
+        None,
+    )
+    coordinates = feature["geometry"].get("coordinates", []) if feature else []
+    if len(coordinates) < 2:
+        raise ValueError("Circuit GeoJSON has no usable outline.")
+
+    points = [(float(point[0]), float(point[1])) for point in coordinates]
+    center_lat = sum(latitude for _, latitude in points) / len(points)
+    longitude_scale = math.cos(math.radians(center_lat))
+    projected = [(longitude * longitude_scale, latitude) for longitude, latitude in points]
+    min_x = min(x for x, _ in projected)
+    max_x = max(x for x, _ in projected)
+    min_y = min(y for _, y in projected)
+    max_y = max(y for _, y in projected)
+
+    width, height, padding = 180, 220, 12
+    track_width, track_height = max_x - min_x, max_y - min_y
+    if track_width <= 0 or track_height <= 0:
+        raise ValueError("Circuit GeoJSON outline has no area.")
+    scale = min((width - padding * 2) / track_width, (height - padding * 2) / track_height)
+    offset_x = (width - track_width * scale) / 2
+    offset_y = (height - track_height * scale) / 2
+    path_points = [
+        f"{offset_x + (x - min_x) * scale:.1f},{height - offset_y - (y - min_y) * scale:.1f}"
+        for x, y in projected
+    ]
+    path_data = "M " + " L ".join(path_points)
+    return (
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 220">'
+        f'<path d="{path_data}" stroke-linecap="round" stroke-linejoin="round"/>'
+        "</svg>"
+    )
+
 
 # Ordered session fields to check on the race object (Race itself is at the top level)
 SESSION_FIELDS: list[tuple[str, str]] = [
@@ -138,9 +182,18 @@ class WallpaperData:
 
 
 def _get_json(url: str) -> dict:
-    response = requests.get(url, timeout=15)
-    response.raise_for_status()
-    return response.json()
+    for attempt in range(3):
+        try:
+            response = requests.get(url, timeout=15)
+            response.raise_for_status()
+            return response.json()
+        except requests.exceptions.RequestException:
+            if attempt == 2:
+                raise
+            delay = 5 * (attempt + 1)
+            print(f"      [warn] API request failed; retrying in {delay}s: {url}")
+            time.sleep(delay)
+    raise RuntimeError(f"Unable to fetch JSON after retries: {url}")
 
 
 def _parse_utc(date: str, time: str | None) -> datetime:
@@ -263,17 +316,17 @@ def fetch_wallpaper_data() -> WallpaperData | None:
 
     # ── Circuit SVG ────────────────────────────────────────────────────────────
     circuit_svg = ""
-    try:
-        # Fall back to a kebab-case guess if the circuit ID isn't in the map
-        svg_stem = CIRCUIT_SVG_MAP.get(circuit_id, f"{circuit_id.replace('_', '-')}-1")
-        svg_url  = f"{SVG_BASE}/{svg_stem}.svg"
-        svg_response = requests.get(svg_url, timeout=10)
-        if svg_response.status_code == 200:
-            circuit_svg = svg_response.text
-        else:
-            print(f"      [warn] Circuit SVG not found ({svg_response.status_code}): {svg_url}")
-    except Exception as exc:
-        print(f"      [warn] Circuit SVG fetch failed: {exc}")
+    track_slug = CIRCUIT_TRACK_MAP.get(circuit_id)
+    if track_slug is None:
+        print(f"      [warn] No circuit map configured for circuit ID '{circuit_id}'.")
+    else:
+        geojson_url = f"{TRACK_ATLAS_BASE}/{track_slug}/raw/layers/gp.geojson"
+        try:
+            response = requests.get(geojson_url, timeout=10)
+            response.raise_for_status()
+            circuit_svg = _circuit_svg_from_geojson(response.json())
+        except (requests.exceptions.RequestException, ValueError, KeyError, TypeError) as exc:
+            print(f"      [warn] Circuit map fetch failed ({geojson_url}): {exc}")
 
     # ── Timezone abbreviation (PST / PDT / EST etc.) ───────────────────────────
     local_tz_name = now_local.strftime("%Z")

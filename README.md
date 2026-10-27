@@ -87,8 +87,10 @@ Jolpica F1 API  ──►  wallpaper_data.py   (fetch race + standings data)
 | Next race + sessions | `api.jolpi.ca/ergast/f1/current/next.json` |
 | Driver standings | `api.jolpi.ca/ergast/f1/current/driverStandings.json` |
 | Constructor standings | `api.jolpi.ca/ergast/f1/current/constructorStandings.json` |
-| Circuit SVG maps | `github.com/julesr0y/f1-circuits-svg` |
+| Circuit layouts | [`tobi/track-atlas`](https://github.com/tobi/track-atlas), using OpenStreetMap geometry |
 | Country flags | `flagcdn.com` |
+
+Circuit geometry is from OpenStreetMap and licensed under the [ODbL](https://opendatacommons.org/licenses/odbl/); the wallpaper includes attribution in its footer.
 
 ---
 
@@ -115,6 +117,8 @@ rm ~/Library/LaunchAgents/com.f1wallpaper.autoupdate.plist
 crontab -e   # delete the F1Wallpaper line
 rm ~/.config/autostart/f1-wallpaper.desktop
 ```
+
+Update logs are saved under `data/wallpaper/` (`wallpaper.log` on Windows/Linux, `launchd.log` on macOS). On Linux, cron does not run a missed 9 AM job after the computer wakes from sleep; the next login autostart or scheduled run will update it.
 
 ---
 

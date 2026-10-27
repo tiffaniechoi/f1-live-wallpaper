@@ -10,7 +10,7 @@ What it does:
   2. Downloads the Playwright Chromium browser
   3. Downloads Titillium Web fonts and builds the HTML template
   4. Generates and sets your first F1 wallpaper immediately
-  5. Registers a Windows Task Scheduler task so the wallpaper
+  5. Registers a platform-specific task so the wallpaper
      updates automatically at every login and daily at 9 AM
 """
 from __future__ import annotations
@@ -77,7 +77,7 @@ def main() -> None:
     print()
     print("   Your desktop now shows the next F1 race.")
     print("   The wallpaper updates automatically after each race:")
-    print("     • Every time you log in to Windows")
+    print("     • Every time you log in")
     print("     • Every day at 9:00 AM")
     print()
     print("   To update manually:")

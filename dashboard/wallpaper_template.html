@@ -194,27 +194,27 @@
 
   /* RIGHT: Championships */
   .col-standings {
-    padding: 24px 28px 20px 28px;
+    padding: 18px 22px 16px;
     display: flex; flex-direction: column;
     justify-content: center;
   }
   .standings-grid {
     display: grid; grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    gap: 16px;
   }
   .standings-panel { display: flex; flex-direction: column; min-height: 0; }
   .standings-panel-title {
-    font-size: 13px; font-weight: 700;
-    letter-spacing: 0.28em; text-transform: uppercase;
+    font-size: 12px; font-weight: 700;
+    letter-spacing: 0.22em; text-transform: uppercase;
     color: var(--text);
-    margin-bottom: 8px; padding-bottom: 8px;
+    margin-bottom: 6px; padding-bottom: 6px;
     border-bottom: 2px solid var(--accent);
     flex-shrink: 0;
   }
   .st-header {
     display: flex; align-items: center;
-    padding: 5px 8px;
-    font-size: 11px; font-weight: 700;
+    padding: 3px 6px;
+    font-size: 10px; font-weight: 700;
     letter-spacing: 0.2em; text-transform: uppercase;
     color: var(--dim); border-bottom: 1px solid var(--border);
     margin-bottom: 2px; flex-shrink: 0;
@@ -225,7 +225,7 @@
 
   .st-row {
     display: flex; align-items: center;
-    padding: 6px 8px; border-radius: 2px;
+    padding: 3px 6px; border-radius: 2px;
     border-left: 2px solid transparent;
   }
   .st-row.leader {
@@ -234,33 +234,33 @@
   }
   .st-pos {
     width: 28px; flex-shrink: 0;
-    font-size: 16px; font-weight: 700;
+    font-size: 14px; font-weight: 700;
     color: var(--dim); font-variant-numeric: tabular-nums;
   }
   .st-row.leader .st-pos { color: var(--text); }
   .st-name {
-    flex: 1; font-size: 18px; font-weight: 400;
+    flex: 1; font-size: 15px; font-weight: 400;
     color: var(--text); white-space: nowrap;
     overflow: hidden; text-overflow: ellipsis;
     display: flex; align-items: center; gap: 6px;
   }
-  .st-name-con { font-size: 18px; }
+  .st-name-con { font-size: 15px; }
   .st-code {
-    font-size: 14px; font-weight: 700;
+    font-size: 12px; font-weight: 700;
     letter-spacing: 0.1em; color: var(--dim);
     min-width: 34px; flex-shrink: 0;
   }
   .st-row.leader .st-code { color: var(--dim); }
-  .st-full { font-size: 18px; flex-shrink: 0; }
+  .st-full { font-size: 15px; flex-shrink: 0; }
   .st-team {
-    font-size: 13px; font-weight: 400;
+    font-size: 11px; font-weight: 400;
     color: var(--dim); white-space: nowrap;
     overflow: hidden; text-overflow: ellipsis;
     flex-shrink: 1; min-width: 0;
   }
   .st-pts {
     width: 48px; text-align: right; flex-shrink: 0;
-    font-size: 18px; font-weight: 700;
+    font-size: 15px; font-weight: 700;
     color: var(--text); font-variant-numeric: tabular-nums;
   }
   .st-row.leader .st-pts { color: var(--text); }
@@ -342,7 +342,9 @@
 
   </div>
 
-  <div class="bottom-bar"></div>
+  <div class="bottom-bar">
+    <div class="bottom-credit">Circuit data © OpenStreetMap contributors · Track Atlas</div>
+  </div>
 
 </div>
 </body>

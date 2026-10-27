@@ -37,8 +37,9 @@ PYTHON       = str(_venv_python) if _venv_python.exists() else sys.executable
 
 # ── Windows ───────────────────────────────────────────────────────────────────
 
-def _setup_windows() -> None:
+def _setup_windows() -> bool:
     launcher_path = PROJECT_ROOT / "scripts" / "run_wallpaper.bat"
+    launcher_ps = str(launcher_path).replace("'", "''")
     log_path = PROJECT_ROOT / "data" / "wallpaper" / "wallpaper.log"
     log_path.parent.mkdir(parents=True, exist_ok=True)
     launcher_path.write_text(
@@ -51,7 +52,8 @@ def _setup_windows() -> None:
     ps_script = f"""
 $ErrorActionPreference = "Stop"
 try {{
-    $action   = New-ScheduledTaskAction -Execute '"{launcher_path}"'
+    $launcher = '{launcher_ps}'
+    $action   = New-ScheduledTaskAction -Execute "cmd.exe" -Argument ('/c ""{0}""' -f $launcher)
     $atLogon  = New-ScheduledTaskTrigger -AtLogOn
     $daily    = New-ScheduledTaskTrigger -Daily -At "09:00"
     $settings = New-ScheduledTaskSettingsSet `
@@ -81,7 +83,7 @@ try {{
     if result.returncode == 0 and "OK" in result.stdout:
         print(f"  Task Scheduler: '{TASK_NAME}' registered (logon + daily 9 AM).")
         print(f"  To remove: schtasks /Delete /TN {TASK_NAME} /F")
-        return
+        return True
 
     # PowerShell failed — fall back to schtasks for daily-only trigger
     print(f"  [warn] PowerShell registration failed, trying schtasks fallback…")
@@ -89,20 +91,23 @@ try {{
         print(f"         {result.stderr.strip()}")
     fallback = subprocess.run(
         ["schtasks", "/Create", "/TN", TASK_NAME,
-         "/TR", str(launcher_path), "/SC", "DAILY", "/ST", "09:00", "/F"],
+         "/TR", f'cmd.exe /c ""{launcher_path}""',
+         "/SC", "DAILY", "/ST", "09:00", "/F"],
         capture_output=True, text=True,
     )
     if fallback.returncode == 0:
         print(f"  Task Scheduler: '{TASK_NAME}' registered (daily 9 AM only — logon trigger requires admin).")
         print(f"  To remove: schtasks /Delete /TN {TASK_NAME} /F")
+        return True
     else:
         print(f"  [error] schtasks also failed:\n{fallback.stderr.strip()}")
         print(f"  Run setup_auto_update.py as Administrator to register the task.")
+        return False
 
 
 # ── macOS ─────────────────────────────────────────────────────────────────────
 
-def _setup_macos() -> None:
+def _setup_macos() -> bool:
     plist_dir  = Path.home() / "Library" / "LaunchAgents"
     plist_path = plist_dir / "com.f1wallpaper.autoupdate.plist"
     plist_dir.mkdir(parents=True, exist_ok=True)
@@ -144,25 +149,31 @@ def _setup_macos() -> None:
         text=True,
     )
     if result.returncode != 0:
-        print(f"  [warn] launchctl: {result.stderr.strip()}")
-        return
+        print(f"  [error] launchctl: {result.stderr.strip()}")
+        return False
     print(f"  launchd: plist loaded from {plist_path}")
     print(f"  To remove: launchctl unload {plist_path} && rm {plist_path}")
+    return True
 
 
 # ── Linux ─────────────────────────────────────────────────────────────────────
 
-def _setup_linux() -> None:
+def _setup_linux() -> bool:
     # 1. Daily cron job at 9 AM
-    cron_line = f'0 9 * * * "{PYTHON}" "{SCRIPT}"  # F1Wallpaper\n'
+    log_path = PROJECT_ROOT / "data" / "wallpaper" / "wallpaper.log"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    cron_line = f'0 9 * * * "{PYTHON}" "{SCRIPT}" >> "{log_path}" 2>&1  # F1Wallpaper'
     existing_cron = subprocess.run(["crontab", "-l"], capture_output=True, text=True)
-    current_entries = existing_cron.stdout if existing_cron.returncode == 0 else ""
-    if "F1Wallpaper" not in current_entries:
-        new_crontab = current_entries.rstrip("\n") + "\n" + cron_line
-        subprocess.run(["crontab", "-"], input=new_crontab, text=True, check=True)
-        print("  crontab: daily 9 AM job added.")
-    else:
-        print("  crontab: job already present.")
+    current_entries = existing_cron.stdout.splitlines()
+    current_entries = [line for line in current_entries if not line.rstrip().endswith("# F1Wallpaper")]
+    new_crontab = "\n".join([*current_entries, cron_line]).lstrip("\n") + "\n"
+    cron_result = subprocess.run(
+        ["crontab", "-"], input=new_crontab, capture_output=True, text=True,
+    )
+    if cron_result.returncode != 0:
+        print(f"  [error] Could not install crontab:\n{cron_result.stderr.strip()}")
+        return False
+    print("  crontab: daily 9 AM job installed.")
 
     # 2. Login autostart via XDG .desktop file
     autostart_dir = Path.home() / ".config" / "autostart"
@@ -181,11 +192,14 @@ def _setup_linux() -> None:
     print(f"  autostart: {desktop_file}")
     print("  To remove: crontab -e  (delete F1Wallpaper line)")
     print(f"             rm {desktop_file}")
+    return True
 
 
 # ── Dependencies ──────────────────────────────────────────────────────────────
 
-def _install_dependencies() -> None:
+def _install_dependencies() -> bool:
+    global PYTHON
+
     venv_dir    = PROJECT_ROOT / ".venv"
     venv_python = venv_dir / _venv_bin / _venv_exe
 
@@ -197,13 +211,17 @@ def _install_dependencies() -> None:
         )
         if result.returncode != 0:
             print(f"  [error] venv creation failed:\n{result.stderr.strip()}")
-            return
+            return False
         print(f"  Virtual environment created at {venv_dir}")
+
+    if not venv_python.exists():
+        print(f"  [error] virtual-environment Python not found: {venv_python}")
+        return False
 
     requirements = PROJECT_ROOT / "install" / "requirements_wallpaper.txt"
     if not requirements.exists():
-        print(f"  [warn] requirements file not found: {requirements}")
-        return
+        print(f"  [error] requirements file not found: {requirements}")
+        return False
     print("  Installing Python dependencies…")
     pip_result = subprocess.run(
         [str(venv_python), "-m", "pip", "install", "-r", str(requirements)],
@@ -211,8 +229,8 @@ def _install_dependencies() -> None:
     )
     if pip_result.returncode != 0:
         print(f"  [error] pip install failed:\n{pip_result.stderr.strip()}")
-    else:
-        print("  Dependencies installed.")
+        return False
+    print("  Dependencies installed.")
 
     print("  Installing Playwright Chromium browser…")
     pw_result = subprocess.run(
@@ -221,24 +239,30 @@ def _install_dependencies() -> None:
     )
     if pw_result.returncode != 0:
         print(f"  [error] playwright install failed:\n{pw_result.stderr.strip()}")
-    else:
-        print("  Playwright Chromium installed.")
+        return False
+    print("  Playwright Chromium installed.")
+    PYTHON = str(venv_python)
+    return True
 
 
 # ── Dispatcher ────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    _install_dependencies()
+    if not _install_dependencies():
+        raise SystemExit(1)
     print(f"  Platform: {PLATFORM}")
     if PLATFORM == "Windows":
-        _setup_windows()
+        registered = _setup_windows()
     elif PLATFORM == "Darwin":
-        _setup_macos()
+        registered = _setup_macos()
     elif PLATFORM == "Linux":
-        _setup_linux()
+        registered = _setup_linux()
     else:
         print(f"  [warn] Unsupported platform '{PLATFORM}' — skipping auto-update setup.")
         print(f"  Run manually: python \"{SCRIPT}\"")
+        return
+    if not registered:
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
